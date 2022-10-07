@@ -13,7 +13,7 @@ import time
 
 from datetime import datetime
 from itertools import combinations
-from scipy.stats.stats import pearsonr
+from scipy.stats import pearsonr
 from tqdm import tqdm
 from Verilog_VCD import Verilog_VCD as v
 
@@ -22,25 +22,75 @@ from Verilog_VCD import Verilog_VCD as v
 # Please refer to PLAN.md for the corresponding functions for different designs.
 ################################################################################
 
-# To read the input values generated during simulation
+# def loadData():
+#    a = []
+#    with open('txtfile', 'r') as f:
+#        buff = f.read().split('\n')
+#    for d in buff[:-1]:
+#        a.append(d)
+#    return np.array(a,dtype='int')
+
+# # To compute the oracle trace from the input trace generated and the secret key used during simulation
+# def computeOracle(k):
+#     ip1 = loadData()
+#     y = np.bitwise_xor(ip1, k)
+#     return y
+
+
+
+
+# # To read the input values generated during simulation
+# def loadData():
+#    print("inside loadData")
+
+#    a=0
+#    with open('aes_input.txt', 'r') as f:
+#        buff = f.read().split('\n')
+#    for d in buff[:-1]:
+#        a=int(d,16)
+#    print("a= ",a)
+# #    return np.array(a,dtype='int')
+#    return a
+
+
+# # To compute the oracle trace from the the input trace generated and the secret key used during simulation
+# def computeOracle(k):
+#     print("inside computeOracle")
+#     # q=[]
+#     y=[]
+#     ip1 = loadData()
+#     # y = np.bitwise_xor(ip1, k)
+#     q = ip1^k
+#     # for ip in ip1:
+#     #     q.append(int(ip[0],16) ^k)
+#     print(q)
+#     q= hex(q)
+
+#     for i in range(2,len(q),2):
+#         y.append(q[i:(i+2)])
+#     return y
+
+
+
 def loadData():
    a = []
-   with open('txtfile', 'r') as f:
+   with open('aes_input.txt', 'r') as f:
        buff = f.read().split('\n')
    for d in buff[:-1]:
        a.append(d)
-   return np.array(a,dtype='int')
+#    print("a",a)
+   return a
 
 # To compute the oracle trace from the the input trace generated and the secret key used during simulation
 def computeOracle(k):
+    y=[]
     ip1 = loadData()
-    y = np.bitwise_xor(ip1, k)
+    for ip in ip1:
+        y.append(int(ip)^k)
     return y
-
 ################################################################################
 ################################################################################
-
-# global variables
+global variables
 vcdpath = 'vcd/'
 filepath = 'pkl/'
 pairs = []
@@ -53,6 +103,7 @@ togglingSigs = set()
 
 def createClkList(clkList, sname, tv):
     for x in tv:
+        # print("x in clklist",x)
         if x[0] not in clkList: # if clock is not there in the dict
             clkList[x[0]]=[[],[]]
             clkList[x[0]][0].append(sname)
@@ -60,20 +111,33 @@ def createClkList(clkList, sname, tv):
         else:
             clkList[x[0]][0].append(sname)
             clkList[x[0]][1].append(x[1])
+    # print("Clklist",clkList)
     return clkList
 
 def readVCD(num_iterations):
     rng = range(1, num_iterations+1)
-    for name, i in zip([' '+str(x)+'.vcd' for x in rng], rng):
+    for name, i in zip([''+str(x)+'.vcd' for x in rng], rng):
         data = {}
         clockList = {}
         data = v.parse_vcd(vcdpath + name, use_stdout=0)
+        # print("data",data)
         for x in data:
             signame = data[x]['nets'][0].get('hier') + '.' + data[x]['nets'][0].get('name')
+            # print("signame",signame)
             clockList = createClkList(clockList, signame, list(data[x]['tv']))
-        with open(filepath + str(i) + '.pkl', 'wb') as f:
+            # print("clockList",clockList)
+        # print("clockList",clockList)
+        with open(filepath + str(i) + '.pkl', 'ab') as f:
+            pkdump =[]
             for x in sorted(clockList):
-                pk.dump([x, clockList[x]], f)
+                # print("x",x)
+                # print("filepath",filepath+str(i))
+                # print("x",clockList[x])
+                # if(x==1):
+                #     print([x,clockList[x]])
+                pkdump.append([x,clockList[x]])
+            pk.dump(pkdump, f)
+            # pk.dump([x, clockList[x]], f)
     print('Pickle files have been created successfully...')
 
 def alphaNumOrder(string):
@@ -81,7 +145,7 @@ def alphaNumOrder(string):
                    else x for x in re.split(r'(\d+)', string)])
 
 def initSigArray(rfiles):
-    vcdname = ' 1.vcd'
+    vcdname = '1.vcd'
     data = v.parse_vcd(vcdpath + vcdname, use_stdout=0)
     for f, n in zip(rfiles, range(1, len(rfiles) + 1)):
         fname = str(n)
@@ -110,6 +174,7 @@ def init(num_iterations):
     global pairs, sigs;
     loadSigArray()
     pairs = initpairs(num_iterations)
+    print("pairs",pairs)
     sigs = [x for x in sigArray1['1']] # All signal names
 
 def updateSigArray(k1, k2, v):
@@ -136,6 +201,7 @@ def processSignals(sigs):
     for sig in tqdm(sigs, "Processing signals"):
         try:
             ham = (sig, HammingDistanceSignalWise(sig))
+            # print("ham",ham)
             temp = []
             for pair in pairs:
                 temp.append(ham[1][pair])
@@ -153,23 +219,27 @@ def transformData(signal):
                 data.append(pk.load(f))
         except EOFError:
             pass
+    # print("data",data)
     return np.transpose(data)
 
-def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value):
+def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it):
     leaks = {}
     O = {}
     mx = {}
     O[1] = []
     init(num_iterations)
     y = computeOracle(key_value)
+    # print("y",y)
     for p in pairs:
+        # print("p in pairs",p)
         O[1].append(bin(y[p[0]-1] ^ y[p[1]-1]).count('1')) # HD b/w two temp values
-
+    print("O[1]",O[1])
     counter = 0
     for sig in togglingSigs:
         data = transformData(sig)
         temp = []
         for sc in data.transpose():
+            # print("sc",sc)
             score = pearsonr(O[1], sc)[0]
             if (math.isnan(score)):
                 temp.append(0)
@@ -189,7 +259,7 @@ def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value):
         leaks_x.append(x)
         leaks_y.append(mx[x])
 
-    with open(leaks_file_path, "w") as f:
+    with open(leaks_file_path+f"leaks{it}"+".txt", "w") as f:
         f.write("Signal,Leakage\n")
         for x in sorted_sigwise:
             f.write("%s,%.4f\n" %(x, sorted_sigwise[x]))
@@ -201,17 +271,20 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
     start_time = time.time()
 
     # simulation
-    subprocess.run(['./' + simulation_script, input_file_path, str(num_iterations)])
+    # subprocess.run(['./' + simulation_script, input_file_path, str(num_iterations)])
 
     # analysis
     nc2 = ((num_iterations * (num_iterations - 1)) / 2)
     readVCD(num_iterations)
     rfiles = os.listdir(filepath)
+    # print("rfiles",rfiles)
     rfiles.sort(key = alphaNumOrder)
+    # print("rfiles after sort",rfiles)
     initSigArray(rfiles)
     debug = 0  # flag for debugging
     init(num_iterations) # mandatory intialisations
-    signals = [x for x in sigGroup] # signals present
+    # print("siggrp",sigGroup)
+    signals = [x for x in sigGroup] # signals present (DOes absolutely nothing)
     for x in signals:
         sigMatrix[x] = []
         for y in range(len(sigGroup[x])):
@@ -219,25 +292,35 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
             sigMatrix[x].append(temp)
 
     result = []
-    for fn in range(1, num_iterations + 1):
-        fname = str(fn)
-        with open(filepath + rfiles[fn - 1], 'rb') as file:
-            temp = pk.load(file)
-            tempsigs = temp[1][0]
-            tempvals = temp[1][1]
-            togglingSigs.update(tempsigs)
-            tempdict = updateSigArray(fname, tempsigs, tempvals)
-
-    processSignals(togglingSigs)
-    numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value)
-
-    end_time = time.time()
-
-    print("Completed!")
-
-    with open(time_file_path, "w") as sf:
-        sf.write("Number of signals: {}\n".format(numSigs))
-        sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
+    for it in range(1,1848):
+        for fn in range(1, num_iterations + 1):
+            fname = str(fn)
+            print("rfiles",rfiles[fn - 1])
+            with open(filepath + rfiles[fn - 1], 'rb') as file:
+                temp = pk.load(file)
+                print("len(temp)[1][0]",len(temp))
+                # tempsigs = temp[0][0] #TODO Code respnsible for taking only one signal  
+                # tempvals = temp[1][1] #TODO Code respnsible for taking only one signal  
+                # for i in range(1,len(temp)):
+                tempsigs = temp[it][1][0]   
+                tempvals = temp[it][1][1]   
+    
+                togglingSigs.update(tempsigs)
+            # print("Toggling Sigs",togglingSigs)
+                tempdict = updateSigArray(fname, tempsigs, tempvals)
+    # print("temp",temp)
+        processSignals(togglingSigs)
+        numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it)
+    
+        end_time = time.time()
+    
+        print("Completed!")
+    
+        with open(time_file_path, "w") as sf:
+            sf.write("Number of signals: {}\n".format(numSigs))
+            sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
+        
+        togglingSigs.clear()
 
 if __name__ == '__main__':
     # creating the argument parser
@@ -292,7 +375,8 @@ if __name__ == '__main__':
     if not os.path.isdir(results_path):
         os.makedirs(results_path)
 
-    leaks_file_path = results_path + "leaks.txt"
+    # leaks_file_path = results_path + "leaks.txt"
+    leaks_file_path = results_path
     time_file_path = results_path + "time.txt"
 
     if not os.path.isdir('vcd/'):
