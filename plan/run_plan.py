@@ -122,6 +122,7 @@ def readVCD(num_iterations):
         data = v.parse_vcd(vcdpath + name, use_stdout=0)
         # print("data",data)
         for x in data:
+            # print("x in data",x)
             signame = data[x]['nets'][0].get('hier') + '.' + data[x]['nets'][0].get('name')
             # print("signame",signame)
             clockList = createClkList(clockList, signame, list(data[x]['tv']))
@@ -292,7 +293,8 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
             sigMatrix[x].append(temp)
 
     result = []
-    for it in range(1,1848):
+    for it in range(0,1847):
+    # it =0
         for fn in range(1, num_iterations + 1):
             fname = str(fn)
             print("rfiles",rfiles[fn - 1])
@@ -304,18 +306,18 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
                 # for i in range(1,len(temp)):
                 tempsigs = temp[it][1][0]   
                 tempvals = temp[it][1][1]   
-    
+
                 togglingSigs.update(tempsigs)
             # print("Toggling Sigs",togglingSigs)
                 tempdict = updateSigArray(fname, tempsigs, tempvals)
     # print("temp",temp)
         processSignals(togglingSigs)
         numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it)
-    
+
         end_time = time.time()
-    
+
         print("Completed!")
-    
+
         with open(time_file_path, "w") as sf:
             sf.write("Number of signals: {}\n".format(numSigs))
             sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
