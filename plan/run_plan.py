@@ -137,9 +137,11 @@ def readVCD(num_iterations):
                 # if(x==1):
                 #     print([x,clockList[x]])
                 pkdump.append([x,clockList[x]])
+            len_pkdump = len(pkdump)
             pk.dump(pkdump, f)
             # pk.dump([x, clockList[x]], f)
     print('Pickle files have been created successfully...')
+    return len_pkdump
 
 def alphaNumOrder(string):
    return ''.join([format(int(x), '05d') if x.isdigit()
@@ -276,7 +278,7 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
 
     # analysis
     nc2 = ((num_iterations * (num_iterations - 1)) / 2)
-    readVCD(num_iterations)
+    len_dump = readVCD(num_iterations)
     rfiles = os.listdir(filepath)
     # print("rfiles",rfiles)
     rfiles.sort(key = alphaNumOrder)
@@ -291,9 +293,9 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
         for y in range(len(sigGroup[x])):
             temp = []
             sigMatrix[x].append(temp)
-
+    
     result = []
-    for it in range(0,1847):
+    for it in range(0,len_dump):
     # it =0
         for fn in range(1, num_iterations + 1):
             fname = str(fn)
