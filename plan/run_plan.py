@@ -16,6 +16,7 @@ from itertools import combinations
 from scipy.stats import pearsonr
 from tqdm import tqdm
 from Verilog_VCD import Verilog_VCD as v
+from multiprocessing import Pool
 
 ################################################################################
 # Functions to be modified by user as per the design being analysed.
@@ -99,7 +100,39 @@ sigGroup = {}
 sigMatrix = {}
 cipher = {}
 O = {}
-togglingSigs = set()
+
+def multiproc (num_iterations,rfiles,leaks_file_path,it):
+    
+    togglingSigs = set()
+    for fn in range(1, num_iterations + 1):
+                fname = str(fn)
+                # print("rfiles",rfiles[fn - 1])
+                with open(filepath + rfiles[fn - 1], 'rb') as file:
+                    temp = pk.load(file)
+                    # print("len(temp)[1][0]",len(temp))
+                    # tempsigs = temp[0][0] #TODO Code respnsible for taking only one signal  
+                    # tempvals = temp[1][1] #TODO Code respnsible for taking only one signal  
+                    # for i in range(1,len(temp)):
+                    tempsigs = temp[it][1][0]   
+                    tempvals = temp[it][1][1]   
+
+                    togglingSigs.update(tempsigs)
+                # print("Toggling Sigs",togglingSigs)
+                    tempdict = updateSigArray(fname, tempsigs, tempvals)
+        # print("temp",temp)
+    processSignals(togglingSigs)
+    numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,togglingSigs,it)
+
+    end_time = time.time()
+
+    print("Completed!")
+
+    # with open(time_file_path, "w") as sf:
+    #     sf.write("Number of signals: {}\n".format(numSigs))
+    #     sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
+    
+    togglingSigs.clear()
+    return numSigs
 
 def createClkList(clkList, sname, tv):
     for x in tv:
@@ -177,7 +210,7 @@ def init(num_iterations):
     global pairs, sigs;
     loadSigArray()
     pairs = initpairs(num_iterations)
-    print("pairs",pairs)
+    # print("pairs",pairs)
     sigs = [x for x in sigArray1['1']] # All signal names
 
 def updateSigArray(k1, k2, v):
@@ -194,8 +227,15 @@ def HammingDistanceSignalWise(sig):
         temp = []
         p1 = str(p[0])
         p2 = str(p[1])
+        # if (sig=="TOP.mkTbSoc.soc.ccore.riscv.stage2.registerfile.integer_rf.arr[8][63:0]"):
+        #         print("p1",p1)
+        #         print("p2",p2)        
         s1 = sigArray1[p1]
         s2 = sigArray1[p2]
+        # if ("TOP.mkTbSoc.soc.ccore.riscv.stage2.registerfile.integer_rf.arr[8][63:0]" in sigArray1[p1] ):
+        #         print("s1",s1)
+        #         print("s2",s2)
+
         temp.append(bin(int(s1[sig], 2) ^ int(s2[sig], 2)).count('1'))
         tempfile[p] = int(np.sum(temp))
     return tempfile
@@ -225,7 +265,9 @@ def transformData(signal):
     # print("data",data)
     return np.transpose(data)
 
-def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it):
+def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,togglingSigs,it):
+    
+    print("iteration: ",it)
     leaks = {}
     O = {}
     mx = {}
@@ -236,13 +278,16 @@ def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it):
     for p in pairs:
         # print("p in pairs",p)
         O[1].append(bin(y[p[0]-1] ^ y[p[1]-1]).count('1')) # HD b/w two temp values
-    print("O[1]",O[1])
+    # print("O[1]",O[1])
     counter = 0
     for sig in togglingSigs:
+
         data = transformData(sig)
+
         temp = []
         for sc in data.transpose():
-            # print("sc",sc)
+            # if (sig=="TOP.mkTbSoc.soc.ccore.riscv.stage2.registerfile.integer_rf.arr[8][63:0]"):
+            #     print("sc",sc)
             score = pearsonr(O[1], sc)[0]
             if (math.isnan(score)):
                 temp.append(0)
@@ -295,36 +340,43 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
             sigMatrix[x].append(temp)
     
     result = []
-    for it in range(0,len_dump):
-    # it =0
-        for fn in range(1, num_iterations + 1):
-            fname = str(fn)
-            print("rfiles",rfiles[fn - 1])
-            with open(filepath + rfiles[fn - 1], 'rb') as file:
-                temp = pk.load(file)
-                print("len(temp)[1][0]",len(temp))
-                # tempsigs = temp[0][0] #TODO Code respnsible for taking only one signal  
-                # tempvals = temp[1][1] #TODO Code respnsible for taking only one signal  
-                # for i in range(1,len(temp)):
-                tempsigs = temp[it][1][0]   
-                tempvals = temp[it][1][1]   
+    inp_multiproc =[]
+    pool = Pool()
+    for i in range(0,len_dump):
+        inp_multiproc.append((num_iterations,rfiles,leaks_file_path,i))
+    numSigs = pool.starmap(multiproc,inp_multiproc)
 
-                togglingSigs.update(tempsigs)
-            # print("Toggling Sigs",togglingSigs)
-                tempdict = updateSigArray(fname, tempsigs, tempvals)
-    # print("temp",temp)
-        processSignals(togglingSigs)
-        numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it)
 
-        end_time = time.time()
+    # for it in range(0,len_dump):
+    # # it =0
+    #     for fn in range(1, num_iterations + 1):
+    #         fname = str(fn)
+    #         # print("rfiles",rfiles[fn - 1])
+    #         with open(filepath + rfiles[fn - 1], 'rb') as file:
+    #             temp = pk.load(file)
+    #             # print("len(temp)[1][0]",len(temp))
+    #             # tempsigs = temp[0][0] #TODO Code respnsible for taking only one signal  
+    #             # tempvals = temp[1][1] #TODO Code respnsible for taking only one signal  
+    #             # for i in range(1,len(temp)):
+    #             tempsigs = temp[it][1][0]   
+    #             tempvals = temp[it][1][1]   
 
-        print("Completed!")
+    #             togglingSigs.update(tempsigs)
+    #         # print("Toggling Sigs",togglingSigs)
+    #             tempdict = updateSigArray(fname, tempsigs, tempvals)
+    # # print("temp",temp)
+    #     processSignals(togglingSigs)
+    #     numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it)
 
-        with open(time_file_path, "w") as sf:
-            sf.write("Number of signals: {}\n".format(numSigs))
-            sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
+    #     end_time = time.time()
+
+    #     print("Completed!")
+
+    #     # with open(time_file_path, "w") as sf:
+    #     #     sf.write("Number of signals: {}\n".format(numSigs))
+    #     #     sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
         
-        togglingSigs.clear()
+    #     togglingSigs.clear()
 
 if __name__ == '__main__':
     # creating the argument parser
@@ -365,6 +417,14 @@ if __name__ == '__main__':
     key_value = args.KeyValue
     simulation_script = args.SimulationScript
     design = args.Design
+
+
+    # input_file_path = "SOC.v"
+    # key_value = 5
+    # simulation_script = "fa2_simulate.h"
+    # design = "Sample"
+
+    
 
     num_iterations = args.num_iterations
     if not num_iterations:
