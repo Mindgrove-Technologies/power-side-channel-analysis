@@ -2,7 +2,7 @@
 import os
 import re
 from tqdm import tqdm
-import numpy as np
+# import numpy as np
 #------------------
 
 
@@ -42,10 +42,10 @@ for i in tqdm(rfiles,desc="Processing Leak Files",total=len(rfiles)):
                     l[info['signame']]=[info['val']]
 # print(l)
 
-# for data in tqdm(l,desc="Printing Leaks",total=len(l)):
+for data in tqdm(l,desc="Printing Leaks",total=len(l)):
     
-#     #To print only the max value of the signal
-#     # wf.write(str(max(l[data]))+"\t\t"+data+"\n")
+    #To print only the max value of the signal
+    wf.write(str(max(l[data]))+"\t\t"+data+"\n")
 
 #     # Print all the values in array
 #     wf.write(f"{l[data]}\t\t{data:>20}\n")
@@ -53,17 +53,17 @@ for i in tqdm(rfiles,desc="Processing Leak Files",total=len(rfiles)):
 # print(l)
 
 # To print the variance of signals
-l_arr={}
-for data in l:
-    fp_val=[float(x) for x in (l[data])]
-    #creating numpy array
-    np_arr=np.array(fp_val)
-    l_arr[data]=np.var(np_arr)
+# l_arr={}
+# for data in l:
+#     fp_val=[float(x) for x in (l[data])]
+#     #creating numpy array
+#     np_arr=np.array(fp_val)
+#     l_arr[data]=np.var(np_arr)
 
-for data in tqdm(l_arr,desc="Printing Variance of signals",total=len(l)):
+# for data in tqdm(l_arr,desc="Printing Variance of signals",total=len(l)):
     
-    #To print only the var value of the signal
-    wf.write(str(l_arr[data])+"\t\t"+f"{data:>50}"+"\n")
+#     #To print only the var value of the signal
+#     wf.write(str(l_arr[data])+"\t\t"+f"{data:>50}"+"\n")
 
 
 #------------------------------------------------------------------------------------------------------#
