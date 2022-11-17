@@ -170,9 +170,9 @@ with open(fillbuffer_file,"w") as wf_fb:
             else:
                 fb_obs.append("OBS = "+dict_obs[sig]+"  "+sig+"\n") 
     wf_fb.write("Number of leaked signals in fillbuffer = "+str(sig_fb)+"\n")               
-    for i in dcache_obs_noobs:
+    for i in fb_obs_noobs:
         wf_fb.write(f"{i}")
-    for i in dcache_obs:
+    for i in fb_obs:
         wf_fb.write(f"{i}")
     wf_fb.write("-------------------------------------------------\n")
 
