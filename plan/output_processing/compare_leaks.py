@@ -73,8 +73,8 @@ wf_comp.write("Signals which have leaked only in Obfuscated Core\n")
 wf_comp.write("Total Number= "+str(len(ex_leak_obs))+"\n")
 count_leaks=0
 for sig_values_obs in sorted(ex_leak_obs.items(), key = lambda kv:kv[1],reverse=True):
-    #Remove this line if all leaked signals are required
     #0.6 is the threshold they have set in the PARAM Paper
+    #Remove this line if all leaked signals are required
     if (float(sig_values_obs[1])>0.6):
         count_leaks+=1
         wf_comp.write(sig_values_obs[1]+"\t\t"+sig_values_obs[0]+"\n") # Only keep this line if all leaks are needed
@@ -111,7 +111,7 @@ wf_comp.write("Number of Leaks in this section with SVF greater than threshold (
 
 wf_comp.write("-------------------------------------------------\n")
 wf_comp.write("Signals that have greater values in obfuscated as compared to non obfuscated core\n")
-wf_comp.write("Number of leaked signals that have greater values in both obfuscated and non obfuscated core = "+str(len(gr_obs))+"\n")
+wf_comp.write("Number of leaked signals that have greater values in obfuscated as compared to non obfuscated core = "+str(len(gr_obs))+"\n")
 for sig in gr_obs:
     if(float(dict_obs[sig])>0.6):
         const_gr+=1
@@ -120,12 +120,43 @@ wf_comp.write("Number of Leaks in this section with SVF greater than threshold (
 
 wf_comp.write("-------------------------------------------------\n")
 wf_comp.write("Signals that have have lesser values in obfuscated as compared to non obfuscated core\n")
-wf_comp.write("Number of leaked signals that have lesser values in both obfuscated and non obfuscated core = "+str(len(ls_obs))+"\n")
+wf_comp.write("Number of leaked signals that have lesser values in obfuscated as compared to non obfuscated core = "+str(len(ls_obs))+"\n")
 for sig in ls_obs:
     wf_comp.write("OBS = "+dict_obs[sig]+"  Non-OBS = "+dict_noobs[sig]+"  "+sig+"\n")        
+wf_comp.write("-------------------------------------------------\n")
+wf_comp.write("-------------------------------------------------\n")
+#Printing the signals present in dcache
+wf_comp.write("Signals present in dcache\n")
+wf_comp.write("All dcache signals\n")
+sig_dcache=0
+for sig in dict_obs:
+    if(re.search("TOP.mkTbSoc.soc.ccore.dmem.dcache.",sig)):
+        if(float(dict_obs[sig])>0.6):
+            sig_dcache+=1
+            if sig in dict_noobs:
+                wf_comp.write("OBS = "+dict_obs[sig]+"  Non-OBS = "+dict_noobs[sig]+"  "+sig+"\n")        
+            else:
+                wf_comp.write("OBS = "+dict_obs[sig]+"  "+sig+"\n")        
+wf_comp.write("Number of leaked signals in dcache = "+str(sig_dcache)+"\n")
+wf_comp.write("-------------------------------------------------\n")
+#Printing the signals present in stage2 registerfile
+wf_comp.write("Signals present in registerfile\n")
+wf_comp.write("All registerfile signals\n")
+sig_regfile=0
+for sig in dict_obs:
+    if(re.search("TOP.mkTbSoc.soc.ccore.riscv.stage2.registerfile.",sig)):
+        # if(float(dict_obs[sig])>0.6):
+        sig_regfile+=1
+        if sig in dict_noobs:
+            wf_comp.write("OBS = "+dict_obs[sig]+"  Non-OBS = "+dict_noobs[sig]+"  "+sig+"\n")        
+        else:
+            wf_comp.write("OBS = "+dict_obs[sig]+"  "+sig+"\n")        
+wf_comp.write("Number of leaked signals in registerfile = "+str(sig_regfile)+"\n")
+wf_comp.write("============================================================================================================\n")
 
 
 
+    
 
 
 
