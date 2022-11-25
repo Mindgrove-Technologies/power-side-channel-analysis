@@ -87,7 +87,7 @@ def computeOracle(k):
     y=[]
     ip1 = loadData()
     for ip in ip1:
-        y.append(int(ip)^k)
+        y.append(int(ip,16)^k)
     return y
 ################################################################################
 ################################################################################
@@ -341,7 +341,7 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
     
     result = []
     inp_multiproc =[]
-    pool = Pool()
+    pool = Pool(processes=16)
     for i in range(0,len_dump):
         inp_multiproc.append((num_iterations,rfiles,leaks_file_path,i))
     numSigs = pool.starmap(multiproc,inp_multiproc)
