@@ -1,6 +1,6 @@
 import os
 import re
-
+import statistics
 
 #File path for leaks of Non-Obfuscated core
 noobs_path="/home/mindgrove/data/rohit/c-class-test/power-side-channel-analysis/plan/output_processing/final_leaks.txt"
@@ -128,7 +128,9 @@ wf_comp.write("-------------------------------------------------\n")
 wf_comp.write("Signals that have have lesser values in obfuscated as compared to non obfuscated core\n")
 wf_comp.write("Number of leaked signals that have lesser values in obfuscated as compared to non obfuscated core = "+str(len(ls_obs))+"\n")
 for sig in ls_obs:
+    const_ls+=1
     wf_comp.write("OBS = "+dict_obs[sig]+"  Non-OBS = "+dict_noobs[sig]+"  "+sig+"\n")        
+wf_comp.write("Number of Leaks in this section with SVF lesser than threshold (0.6) = "+str(const_ls)+"\n")    
 wf_comp.write("-------------------------------------------------\n")
 wf_comp.write("-------------------------------------------------\n")
 
@@ -199,11 +201,30 @@ with open(registerfile_file,"w") as wf_regfile:
     wf_regfile.write("============================================================================================================\n")
 wf_comp.write("============================================================================================================\n")
 
+#Printing mean, median and variance
+#Values lesser than threshold
+values_lt=[]
+values_gt=[]
+for sig in dict_obs:
+    if(float(dict_obs[sig])<0.6):
+        values_lt.append(float(dict_obs[sig]))
+    else:
+        values_gt.append(float(dict_obs[sig]))
+values_lt=sorted(values_lt, key=float)
+values_gt=sorted(values_gt, key=float)
 
-
-    
-
-
+wf_comp.write(f"Number of signals less than threshold =           {len(values_lt)}\n")
+wf_comp.write(f"Mean of signals less than threshold(0.6) =           {statistics.mean(values_lt)}\n")
+wf_comp.write(f"Median of signals less than threshold(0.6)=         {statistics.median(values_lt)}\n")
+wf_comp.write(f"Standard deviation of signals less than threshold(0.6)= {statistics.stdev(values_lt)}\n")
+wf_comp.write(f"Variance of signals less than threshold(0.6) =           {statistics.variance(values_lt)}\n")
+wf_comp.write("----------------------------------------\n")
+wf_comp.write(f"Number of signals greater than threshold(0.6) {len(values_gt)}\n")
+wf_comp.write(f"Mean of signals greater than threshold(0.6) =           {statistics.mean(values_gt)}\n")
+wf_comp.write(f"Median of signals greater than threshold(0.6)=         {statistics.median(values_gt)}\n")
+wf_comp.write(f"Standard deviation of signals greater than threshold(0.6)= {statistics.stdev(values_gt)}\n")
+wf_comp.write(f"Variance of signals greater than threshold(0.6) =           {statistics.variance(values_gt)}\n")
+wf_comp.write("----------------------------------------\n")
 
 
 
