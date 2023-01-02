@@ -113,19 +113,25 @@ def multiproc (num_iterations,rfiles,leaks_file_path,it):
                     # tempsigs = temp[0][0] #TODO Code respnsible for taking only one signal  
                     # tempvals = temp[1][1] #TODO Code respnsible for taking only one signal  
                     # for i in range(1,len(temp)):
-                    tempsigs = temp[it][1][0]   
-                    tempvals = temp[it][1][1]   
-
+                    try:
+                       tempsigs = temp[it][1][0]
+                       tempvals = temp[it][1][1]
+                    except:
+                       print(f"ERROR : {it},{rfiles[fn-1]}")
+                       #print(f"ERROR : {temp[it][1]}")
+                    else:
+                        tempsigs=temp[it-1][1][0]
+                        tempvals=temp[it-1][1][1]
                     togglingSigs.update(tempsigs)
                 # print("Toggling Sigs",togglingSigs)
                     tempdict = updateSigArray(fname, tempsigs, tempvals)
         # print("temp",temp)
-    processSignals(togglingSigs)
+    processSignals(togglingSigs,it)
     numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,togglingSigs,it)
 
     end_time = time.time()
 
-    print("Completed!")
+    #print("Completed!")
 
     # with open(time_file_path, "w") as sf:
     #     sf.write("Number of signals: {}\n".format(numSigs))
@@ -240,8 +246,8 @@ def HammingDistanceSignalWise(sig):
         tempfile[p] = int(np.sum(temp))
     return tempfile
 
-def processSignals(sigs):
-    for sig in tqdm(sigs, "Processing signals"):
+def processSignals(sigs,it):
+    for sig in tqdm(sigs, f"Processing signals {it}"):
         try:
             ham = (sig, HammingDistanceSignalWise(sig))
             # print("ham",ham)
@@ -267,7 +273,7 @@ def transformData(signal):
 
 def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,togglingSigs,it):
     
-    print("iteration: ",it)
+    #print("iteration: ",it)
     leaks = {}
     O = {}
     mx = {}
@@ -315,7 +321,7 @@ def computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,toggl
 
     return len(sorted_sigwise)
 
-def main(input_file_path, simulation_script, num_iterations, key_value, leaks_file_path, time_file_path):
+def main(num_iterations, key_value, leaks_file_path, time_file_path,proc):
     start_time = time.time()
 
     # simulation
@@ -338,63 +344,32 @@ def main(input_file_path, simulation_script, num_iterations, key_value, leaks_fi
         for y in range(len(sigGroup[x])):
             temp = []
             sigMatrix[x].append(temp)
-    
     result = []
     inp_multiproc =[]
-    pool = Pool(processes=16)
+    pool = Pool(processes=proc)
+    print(len_dump)
     for i in range(0,len_dump):
         inp_multiproc.append((num_iterations,rfiles,leaks_file_path,i))
     numSigs = pool.starmap(multiproc,inp_multiproc)
 
-
-    # for it in range(0,len_dump):
-    # # it =0
-    #     for fn in range(1, num_iterations + 1):
-    #         fname = str(fn)
-    #         # print("rfiles",rfiles[fn - 1])
-    #         with open(filepath + rfiles[fn - 1], 'rb') as file:
-    #             temp = pk.load(file)
-    #             # print("len(temp)[1][0]",len(temp))
-    #             # tempsigs = temp[0][0] #TODO Code respnsible for taking only one signal  
-    #             # tempvals = temp[1][1] #TODO Code respnsible for taking only one signal  
-    #             # for i in range(1,len(temp)):
-    #             tempsigs = temp[it][1][0]   
-    #             tempvals = temp[it][1][1]   
-
-    #             togglingSigs.update(tempsigs)
-    #         # print("Toggling Sigs",togglingSigs)
-    #             tempdict = updateSigArray(fname, tempsigs, tempvals)
-    # # print("temp",temp)
-    #     processSignals(togglingSigs)
-    #     numSigs = computeAndSaveLeakageScores(leaks_file_path, num_iterations, key_value,it)
-
-    #     end_time = time.time()
-
-    #     print("Completed!")
-
-    #     # with open(time_file_path, "w") as sf:
-    #     #     sf.write("Number of signals: {}\n".format(numSigs))
-    #     #     sf.write("Total time taken: {:.4f}s\n".format(end_time - start_time))
-        
-    #     togglingSigs.clear()
 
 if __name__ == '__main__':
     # creating the argument parser
     my_parser = argparse.ArgumentParser(description='Pre-silicon power side-channel analysis using PLAN')
 
     # adding the arguments
-    my_parser.add_argument('InputFilePath',
-                           metavar='input_file_path',
-                           type=str,
-                           help='path to the input Verilog file to be analyzed')
+    #my_parser.add_argument('InputFilePath',
+    #                       metavar='input_file_path',
+    #                       type=str,
+    #                       help='path to the input Verilog file to be analyzed')
     my_parser.add_argument('KeyValue',
                            metavar='key_value',
                            type=int,
                            help='secret value in input Verilog file')
-    my_parser.add_argument('SimulationScript',
-                           metavar='simulation_script',
-                           type=str,
-                           help='path to script used for behavioral simulation')
+    #my_parser.add_argument('SimulationScript',
+    #                       metavar='simulation_script',
+    #                       type=str,
+    #                       help='path to script used for behavioral simulation')
     my_parser.add_argument('Design',
                            metavar='design',
                            type=str,
@@ -409,22 +384,21 @@ if __name__ == '__main__':
                            type=str,
                            action='store',
                            help='name of directory within results/ directory to store results, default value = current timestamp')
-
+    my_parser.add_argument('-p',
+                           '--process',
+                           type=int,
+                           action='store',
+                           help='no of cores that needs to be used')
     # parsing the arguments
     args = my_parser.parse_args()
 
-    input_file_path = args.InputFilePath
+    #input_file_path = args.InputFilePath
     key_value = args.KeyValue
-    simulation_script = args.SimulationScript
+    #simulation_script = args.SimulationScript
     design = args.Design
-
-
-    # input_file_path = "SOC.v"
-    # key_value = 5
-    # simulation_script = "fa2_simulate.h"
-    # design = "Sample"
-
-    
+    proc = args.process
+    if not proc:
+       proc = os.cpu_count()
 
     num_iterations = args.num_iterations
     if not num_iterations:
@@ -452,13 +426,13 @@ if __name__ == '__main__':
     if not os.path.isdir('modules/'):
         os.makedirs('modules/')
 
-    print("Note: Please check that:")
-    print("1. the simulation script ({}) given as argument has the correct line numbers, variable names, max range to generate random values".format(simulation_script))
-    print("2. the secret key ({}) given as argument is same as that in the input Verilog file ({}) - please refer to PLAN.md for guidance".format(key_value, input_file_path))
-    print("3. this script (run_plan.py) has the correct functions to load data and compute oracle (in the first few lines) - please refer to PLAN.md for guidance")
-    print()
-    print("If you are sure that the above details are correct, and wish to continue, press Y/y (and enter)")
-    print("To stop, press any other key (and enter)")
-    user_input = input()
-    if user_input == 'y' or user_input == 'Y':
-        main(input_file_path, simulation_script, num_iterations, key_value, leaks_file_path, time_file_path)
+    #print("Note: Please check that:")
+    #print("1. the simulation script ({}) given as argument has the correct line numbers, variable names, max range to generate random values".format(simulation_script))
+    #print("2. the secret key ({}) given as argument is same as that in the input Verilog file () - please refer to PLAN.md for guidance".format(key_value))
+    #print("3. this script (run_plan.py) has the correct functions to load data and compute oracle (in the first few lines) - please refer to PLAN.md for guidance")
+    #print()
+    #print("If you are sure that the above details are correct, and wish to continue, press Y/y (and enter)")
+    #print("To stop, press any other key (and enter)")
+    #user_input = input()
+    #if user_input == 'y' or user_input == 'Y':
+    main(num_iterations, key_value, leaks_file_path, time_file_path,proc)
