@@ -5,13 +5,14 @@ import statistics
 #File path for leaks of Non-Obfuscated core
 noobs_path="/home/mindgrove/data/rohit/c-class-test/power-side-channel-analysis/plan/output_processing/final_leaks.txt"
 #File path for leaks of Obfuscated core
+#obs_path="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/final_leaks.txt"
 obs_path="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/final_leaks.txt"
 #File Path for the comparison report
-compare_report="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/comparison_report.txt"
+compare_report="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/comparison/comparison_report.txt"
 #Separate file for separate modules
-dcache_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/dcache_sig.txt"
-fillbuffer_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/fillbuffer_sig.txt"
-registerfile_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/registerfile_sig.txt"
+dcache_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/comparison/dcache_sig.txt"
+fillbuffer_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/comparison/fillbuffer_sig.txt"
+registerfile_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/comparison/registerfile_sig.txt"
 # dcache_file="/home/mindgrove/data/rohit/c-class-work/power-side-channel-analysis/plan/output_processing/dcache_sig.txt"
 
 
@@ -20,7 +21,11 @@ f_obs=open(obs_path,"r")
 f_noobs=open(noobs_path,"r")
 
 #Opening comparison report in write mode
-wf_comp=open(compare_report,"w")
+try:
+    wf_comp=open(compare_report,"w")
+except FileNotFoundError:
+    os.mkdir("comparison")
+    wf_comp=open(compare_report,"w")
 wf_comp.write("COMPARISON REPORT\n")
 
 #Storing data from both files in two separate varialbles
@@ -245,4 +250,3 @@ wf_comp.write("----------------------------------------\n")
 wf_comp.close()
 f_noobs.close()
 f_obs.close()
-
